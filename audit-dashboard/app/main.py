@@ -415,24 +415,25 @@ def export_csv(
         limit=5000,
     )
     output = io.StringIO()
+    output.write("\ufeff")  # UTF-8 BOM for Arabic Excel compatibility
     writer = csv.writer(output)
     writer.writerow(
         [
-            "ID",
-            "Timestamp (UTC)",
-            "User (Who)",
-            "Action (Did What)",
-            "File ID",
-            "File Path",
-            "Previous Path",
-            "Version #",
-            "Client / Editor Source",
-            "IP Address",
-            "Share Target",
-            "Severity",
-            "Is Anomaly",
-            "Anomaly Reason",
-            "Raw Details",
+            "المعرف",
+            "التاريخ والوقت (UTC)",
+            "المستخدم (من)",
+            "نوع العملية (ماذا فعل)",
+            "معرف الملف",
+            "مسار الملف",
+            "المسار السابق",
+            "رقم الإصدار",
+            "أداة التعديل / البرنامج",
+            "عنوان IP",
+            "جهة المشاركة",
+            "الأهمية",
+            "تنبيه أمني",
+            "سبب التنبيه",
+            "التفاصيل الأصلية",
         ]
     )
     for ev in result["events"]:

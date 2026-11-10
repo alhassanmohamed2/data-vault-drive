@@ -71,9 +71,13 @@ $OCC config:app:set richdocuments wopi_url --value="$PUBLIC_URL"
 $OCC config:app:set richdocuments public_wopi_url --value="$PUBLIC_URL"
 $OCC config:app:set richdocuments disable_certificate_verification --value="yes"
 
-# 8. Brand Nextcloud Instance as "Company Files Vault"
-$OCC config:app:set theming name --value="Company Files Vault" || true
-$OCC config:app:set theming slogan --value="Secure Enterprise Cloud Storage & Collaborative Office" || true
+# 8. Brand Nextcloud Instance in Arabic ("خزنة ملفات الشركة") & Force Arabic RTL UI
+$OCC config:system:set default_language --value="ar"
+$OCC config:system:set force_language --value="ar"
+$OCC config:system:set default_locale --value="ar_EG"
+$OCC user:setting "${NEXTCLOUD_ADMIN_USER:-admin}" core lang "ar" || true
+$OCC config:app:set theming name --value="خزنة ملفات الشركة" || true
+$OCC config:app:set theming slogan --value="نظام التخزين السحابي وتحرير المستندات المؤسسي الآمن" || true
 
 # 9. Run database index & missing column optimizations
 $OCC db:add-missing-indices --no-interaction || true

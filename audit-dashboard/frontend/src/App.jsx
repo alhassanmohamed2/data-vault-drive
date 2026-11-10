@@ -21,7 +21,7 @@ import {
   Laptop,
   Globe,
   Smartphone,
-  ChevronRight,
+  ChevronLeft,
   X,
   Filter,
   Sparkles,
@@ -34,68 +34,96 @@ import {
 
 const ACTION_META = {
   FILE_EDITED: {
-    label: 'Edited / Saved',
+    label: 'تم التعديل / الحفظ',
     color: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
     icon: FileEdit,
   },
   FILE_CREATED: {
-    label: 'Created / Uploaded',
+    label: 'تم الإنشاء / الرفع',
     color: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
     icon: FilePlus,
   },
   FILE_VIEWED: {
-    label: 'Opened / Viewed',
+    label: 'تم الفتح / العرض',
     color: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30',
     icon: Eye,
   },
   FILE_RENAMED: {
-    label: 'Renamed / Moved',
+    label: 'إعادة تسمية / نقل',
     color: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
     icon: ArrowRightLeft,
   },
   FILE_DELETED: {
-    label: 'Deleted',
+    label: 'تم الحذف',
     color: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
     icon: Trash2,
   },
   FILE_RESTORED: {
-    label: 'Restored',
+    label: 'تمت الاستعادة',
     color: 'bg-teal-500/15 text-teal-300 border-teal-500/30',
     icon: RefreshCw,
   },
   VERSION_RESTORED: {
-    label: 'Version Restored',
+    label: 'استعادة إصدار سابق',
     color: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30',
     icon: GitCommit,
   },
   FILE_SHARED: {
-    label: 'Shared (Internal)',
+    label: 'مشاركة داخلية',
     color: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
     icon: Share2,
   },
   FILE_SHARED_PUBLIC: {
-    label: 'Shared (Public Link)',
+    label: 'مشاركة عبر رابط عام',
     color: 'bg-orange-500/20 text-orange-300 border-orange-500/40',
     icon: Globe,
   },
+  PERMISSION_CHANGED: {
+    label: 'تغيير الصلاحيات',
+    color: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+    icon: Lock,
+  },
   USER_LOGIN: {
-    label: 'User Login',
+    label: 'تسجيل دخول ناجح',
     color: 'bg-slate-700/60 text-slate-300 border-slate-600',
     icon: UserCheck,
   },
   USER_LOGIN_FAILED: {
-    label: 'Failed Login',
+    label: 'محاولة دخول فاشلة',
     color: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
     icon: Lock,
   },
 };
 
+function translateClientSource(source) {
+  const s = (source || '').toLowerCase();
+  if (s.includes('collabora') || s.includes('office')) {
+    return 'محرر المستندات المباشر (Collabora Office)';
+  }
+  if (s.includes('desktop')) {
+    return 'تطبيق مزامنة سطح المكتب';
+  }
+  if (s.includes('mobile')) {
+    return 'تطبيق الهاتف المحمول';
+  }
+  if (s.includes('text')) {
+    return 'المحرر النصي السحابي';
+  }
+  if (s.includes('web browser')) {
+    return 'متصفح الويب';
+  }
+  if (s.includes('webdav')) {
+    return 'عميل WebDAV';
+  }
+  return source || 'النظام / واجهة برمجية';
+}
+
 function formatBytes(bytes) {
   if (bytes === null || bytes === undefined) return '—';
   const abs = Math.abs(bytes);
-  if (abs === 0) return '0 B';
+  if (abs === 0) return '0 بايت';
   const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const sizes = ['بايت', 'كيلوبايت', 'ميجابايت', 'جيجابايت'];
   const i = Math.floor(Math.log(abs) / Math.log(k));
   const val = (abs / Math.pow(k, i)).toFixed(i === 0 ? 0 : 2);
   return `${bytes < 0 ? '-' : ''}${val} ${sizes[i]}`;
@@ -104,11 +132,11 @@ function formatBytes(bytes) {
 function formatRelativeTime(iso) {
   if (!iso) return '—';
   const diffSec = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (diffSec < 5) return 'just now';
-  if (diffSec < 60) return `${diffSec}s ago`;
-  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
-  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
-  return `${Math.floor(diffSec / 86400)}d ago`;
+  if (diffSec < 5) return 'الآن';
+  if (diffSec < 60) return `منذ ${diffSec} ثانية`;
+  if (diffSec < 3600) return `منذ ${Math.floor(diffSec / 60)} دقيقة`;
+  if (diffSec < 86400) return `منذ ${Math.floor(diffSec / 3600)} ساعة`;
+  return `منذ ${Math.floor(diffSec / 86400)} يوم`;
 }
 
 function formatUtcTimestamp(iso) {
@@ -128,16 +156,19 @@ function ActionBadge({ action, version }) {
   };
   const Icon = meta.icon;
   return (
-    <div className="inline-flex items-center gap-1.5">
+    <div className="inline-flex items-center gap-1.5 flex-wrap">
       <span
-        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${meta.color}`}
+        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${meta.color}`}
       >
         <Icon className="w-3.5 h-3.5" />
         {meta.label}
       </span>
       {version ? (
-        <span className="px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30">
-          v{version}
+        <span
+          dir="ltr"
+          className="px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30"
+        >
+          الإصدار v{version}
         </span>
       ) : null}
     </div>
@@ -146,40 +177,40 @@ function ActionBadge({ action, version }) {
 
 function ClientIcon({ source }) {
   const s = (source || '').toLowerCase();
+  const label = translateClientSource(source);
   if (s.includes('collabora') || s.includes('office')) {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs text-indigo-300 bg-indigo-500/10 border border-indigo-500/25 px-2 py-0.5 rounded-md">
+      <span className="inline-flex items-center gap-1.5 text-xs text-indigo-300 bg-indigo-500/10 border border-indigo-500/25 px-2.5 py-0.5 rounded-md font-medium">
         <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-400" />
-        {source}
+        {label}
       </span>
     );
   }
   if (s.includes('desktop')) {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-md">
+      <span className="inline-flex items-center gap-1.5 text-xs text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-0.5 rounded-md font-medium">
         <Laptop className="w-3.5 h-3.5 text-emerald-400" />
-        {source}
+        {label}
       </span>
     );
   }
   if (s.includes('mobile')) {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-md">
+      <span className="inline-flex items-center gap-1.5 text-xs text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2.5 py-0.5 rounded-md font-medium">
         <Smartphone className="w-3.5 h-3.5 text-amber-400" />
-        {source}
+        {label}
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-slate-300 bg-slate-800/80 border border-slate-700 px-2 py-0.5 rounded-md">
+    <span className="inline-flex items-center gap-1.5 text-xs text-slate-300 bg-slate-800/80 border border-slate-700 px-2.5 py-0.5 rounded-md font-medium">
       <Globe className="w-3.5 h-3.5 text-slate-400" />
-      {source || 'Web / API'}
+      {label}
     </span>
   );
 }
 
 export default function App() {
-  // Authentication state
   const [authToken, setAuthToken] = useState(() => localStorage.getItem('shehata_audit_token') || '');
   const [authUser, setAuthUser] = useState(null);
   const [authChecking, setAuthChecking] = useState(true);
@@ -203,7 +234,7 @@ export default function App() {
   const [anomaliesOnly, setAnomaliesOnly] = useState(false);
   const [excludeViews, setExcludeViews] = useState(false);
 
-  // Selected File / User for Deep Forensics
+  // Selected File / User
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileTimeline, setFileTimeline] = useState(null);
   const [loadingTimeline, setLoadingTimeline] = useState(false);
@@ -231,7 +262,6 @@ export default function App() {
     [authToken],
   );
 
-  // Check current session on mount
   useEffect(() => {
     (async () => {
       try {
@@ -262,8 +292,7 @@ export default function App() {
         body: JSON.stringify({ username: loginUsername, password: loginPassword }),
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setLoginError(err.detail || 'Invalid username or password');
+        setLoginError('اسم المستخدم أو كلمة المرور غير صحيحة');
         return;
       }
       const data = await res.json();
@@ -272,7 +301,7 @@ export default function App() {
       setAuthUser(data.username);
       setLoginPassword('');
     } catch {
-      setLoginError('Unable to reach authentication server');
+      setLoginError('تعذر الاتصال بخادم المصادقة');
     } finally {
       setLoginSubmitting(false);
     }
@@ -391,24 +420,24 @@ export default function App() {
 
   if (authChecking) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 text-sm">
-        Verifying security session...
+      <div dir="rtl" className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 text-sm">
+        جارٍ التحقق من جلسة الأمان...
       </div>
     );
   }
 
-  // Render Login Screen if not authenticated
+  // شاشة تسجيل الدخول باللغة العربية
   if (!authUser) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+      <div dir="rtl" className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl space-y-6">
           <div className="flex flex-col items-center text-center">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/25 mb-4">
               <ShieldCheck className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-xl font-bold text-white">Company Files Vault</h1>
-            <p className="text-xs text-slate-400 mt-1">
-              Enterprise File Edit Audit, Collabora Office Attribution & Version History Console
+            <h1 className="text-xl font-bold text-white">خزنة ملفات الشركة</h1>
+            <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+              لوحة التدقيق الأمني، تتبع تعديلات الملفات، وسجل الإصدارات الكامل (من قام بماذا ومتى)
             </p>
           </div>
 
@@ -422,44 +451,46 @@ export default function App() {
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Administrator Username
+                اسم مستخدم المسؤول
               </label>
               <input
                 type="text"
+                dir="ltr"
                 required
                 value={loginUsername}
                 onChange={(e) => setLoginUsername(e.target.value)}
                 placeholder="admin"
-                className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none"
+                className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none text-left"
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Password
+                كلمة المرور
               </label>
               <input
                 type="password"
+                dir="ltr"
                 required
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder="Enter administrator password..."
-                className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none"
+                placeholder="أدخل كلمة مرور المسؤول..."
+                className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none text-left"
               />
             </div>
 
             <button
               type="submit"
               disabled={loginSubmitting}
-              className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold text-sm shadow-lg shadow-blue-600/25 transition flex items-center justify-center gap-2"
+              className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-sm shadow-lg shadow-blue-600/25 transition flex items-center justify-center gap-2"
             >
               <KeyRound className="w-4 h-4" />
-              {loginSubmitting ? 'Signing In...' : 'Sign In to Audit Console'}
+              {loginSubmitting ? 'جارٍ تسجيل الدخول...' : 'تسجيل الدخول إلى لوحة التدقيق'}
             </button>
           </form>
 
           <div className="pt-4 border-t border-slate-800 text-center text-[11px] text-slate-500">
-            Protected by HMAC-SHA256 Session Auth • Nextcloud 30 + PostgreSQL 16
+            محمي بمصادقة الجلسات المشفرة HMAC-SHA256 • مربوط بقاعدة بيانات PostgreSQL 16
           </div>
         </div>
       </div>
@@ -474,31 +505,31 @@ export default function App() {
   const pgConnected = stats?.system?.postgres_connected;
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
-      {/* Top Enterprise Header */}
+    <div dir="rtl" className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+      {/* الشريط العلوي */}
       <header className="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
             <ShieldCheck className="w-6 h-6 text-white" />
           </div>
           <div>
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 flex-wrap">
               <h1 className="text-base font-bold tracking-tight text-white">
-                Company Files Vault
+                خزنة ملفات الشركة — مركز التدقيق وتتبع التعديلات
               </h1>
-              <span className="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+              <span className="px-2.5 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Live WOPI + Audit Tail
+                مراقبة فورية مباشرة
               </span>
               {pgConnected && (
-                <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-medium rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30">
                   <Database className="w-3 h-3" />
-                  PostgreSQL Attributed
+                  متصل بقاعدة بيانات PostgreSQL
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-400">
-              Real-Time File Edit Attribution, Collabora Office Session Resolver & Version Chain of Custody
+            <p className="text-xs text-slate-400 mt-0.5">
+              تتبع دقيق لكل عملية إنشاء أو تعديل أو عرض أو حذف أو مشاركة مع ربط جلسات Collabora Office وسجل الإصدارات
             </p>
           </div>
         </div>
@@ -507,128 +538,128 @@ export default function App() {
           <button
             onClick={handleResync}
             disabled={resyncing}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
-            title="Re-parse audit.log and resolve all Collabora tokens via PostgreSQL"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+            title="إعادة فهرسة سجل التدقيق وربط جلسات Collabora من قاعدة البيانات"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${resyncing ? 'animate-spin text-blue-400' : ''}`} />
-            {resyncing ? 'Syncing Log...' : 'Re-Sync Audit Log'}
+            {resyncing ? 'جارٍ المزامنة...' : 'إعادة مزامنة السجل'}
           </button>
 
           <button
             onClick={handleSeedDemo}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 transition"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            Add Sample Team Edits
+            إضافة أنشطة تجريبية
           </button>
 
           <a
             href={`api/export/csv?${buildQueryParams()}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
           >
             <Download className="w-3.5 h-3.5" />
-            CSV
+            تصدير CSV
           </a>
 
           <a
             href={`api/export/json?${buildQueryParams()}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
           >
             <Download className="w-3.5 h-3.5" />
-            JSON
+            تصدير JSON
           </a>
 
           <button
             onClick={handleLogout}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 transition"
           >
             <LogOut className="w-3.5 h-3.5" />
-            Sign Out ({authUser})
+            خروج ({authUser})
           </button>
         </div>
       </header>
 
-      {/* Main Content Container */}
+      {/* المحتوى الرئيسي */}
       <div className="flex-1 max-w-[1600px] w-full mx-auto px-6 py-6 space-y-6">
-        {/* KPI Telemetry Row */}
+        {/* بطاقات الإحصائيات السريعة */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4">
-            <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
-              <span>TOTAL AUDIT EVENTS</span>
+            <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
+              <span>إجمالي أحداث السجل</span>
               <Activity className="w-4 h-4 text-slate-400" />
             </div>
             <div className="text-2xl font-bold text-white mt-1.5">{ov.total_events || 0}</div>
             <div className="text-[11px] text-slate-400 mt-1">
-              Across {ov.tracked_files || 0} tracked files
+              عبر {ov.tracked_files || 0} ملف متتبع
             </div>
           </div>
 
           <div className="bg-slate-900/90 border border-blue-500/25 rounded-xl p-4">
-            <div className="flex items-center justify-between text-xs text-blue-300 font-medium">
-              <span>FILE EDITS & SAVES</span>
+            <div className="flex items-center justify-between text-xs text-blue-300 font-semibold">
+              <span>تعديلات وحفظ الملفات</span>
               <FileEdit className="w-4 h-4 text-blue-400" />
             </div>
             <div className="text-2xl font-bold text-blue-400 mt-1.5">{ov.total_edits || 0}</div>
             <div className="text-[11px] text-slate-400 mt-1">
-              Collabora Office + WebDAV saves
+              Collabora Office + المزامنة والويب
             </div>
           </div>
 
           <div className="bg-slate-900/90 border border-emerald-500/25 rounded-xl p-4">
-            <div className="flex items-center justify-between text-xs text-emerald-300 font-medium">
-              <span>FILES CREATED</span>
+            <div className="flex items-center justify-between text-xs text-emerald-300 font-semibold">
+              <span>ملفات تم إنشاؤها</span>
               <FilePlus className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-2xl font-bold text-emerald-400 mt-1.5">{ov.total_created || 0}</div>
-            <div className="text-[11px] text-slate-400 mt-1">Initial v1 file uploads</div>
+            <div className="text-[11px] text-slate-400 mt-1">عمليات الرفع والإنشاء الأولية</div>
           </div>
 
           <div className="bg-slate-900/90 border border-cyan-500/25 rounded-xl p-4">
-            <div className="flex items-center justify-between text-xs text-cyan-300 font-medium">
-              <span>OPENED / VIEWED</span>
+            <div className="flex items-center justify-between text-xs text-cyan-300 font-semibold">
+              <span>عمليات الفتح والعرض</span>
               <Eye className="w-4 h-4 text-cyan-400" />
             </div>
             <div className="text-2xl font-bold text-cyan-300 mt-1.5">{ov.total_views || 0}</div>
-            <div className="text-[11px] text-slate-400 mt-1">Authenticated read access</div>
+            <div className="text-[11px] text-slate-400 mt-1">سجل قراءة واستعراض الملفات</div>
           </div>
 
           <div className="bg-slate-900/90 border border-amber-500/25 rounded-xl p-4">
-            <div className="flex items-center justify-between text-xs text-amber-300 font-medium">
-              <span>ACTIVE USERS</span>
+            <div className="flex items-center justify-between text-xs text-amber-300 font-semibold">
+              <span>المستخدمون النشطون</span>
               <Users className="w-4 h-4 text-amber-400" />
             </div>
             <div className="text-2xl font-bold text-amber-300 mt-1.5">{ov.active_users || 0}</div>
-            <div className="text-[11px] text-slate-400 mt-1">Attributed user accounts</div>
+            <div className="text-[11px] text-slate-400 mt-1">حسابات المستخدمين الموثقة</div>
           </div>
 
           <div className="bg-slate-900/90 border border-rose-500/25 rounded-xl p-4">
-            <div className="flex items-center justify-between text-xs text-rose-300 font-medium">
-              <span>SECURITY ALERTS</span>
+            <div className="flex items-center justify-between text-xs text-rose-300 font-semibold">
+              <span>التنبيهات الأمنية</span>
               <AlertTriangle className="w-4 h-4 text-rose-400" />
             </div>
             <div className="text-2xl font-bold text-rose-400 mt-1.5">{ov.total_anomalies || 0}</div>
             <div className="text-[11px] text-slate-400 mt-1">
-              Public shares / mass deletes
+              روابط عامة أو حذف جماعي
             </div>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
+        {/* التبويبات الرئيسية */}
         <div className="flex items-center gap-2 border-b border-slate-800 pb-3 overflow-x-auto">
           <button
             onClick={() => setActiveTab('explorer')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition ${
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition ${
               activeTab === 'explorer'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
                 : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
             }`}
           >
             <Search className="w-4 h-4" />
-            Live Audit Explorer ({eventsData.total || 0})
+            سجل التدقيق المباشر ({eventsData.total || 0})
           </button>
 
           <button
@@ -638,14 +669,14 @@ export default function App() {
                 openFileInspector(hotFiles[0].file_path);
               }
             }}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition ${
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition ${
               activeTab === 'files'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
                 : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
             }`}
           >
             <GitCommit className="w-4 h-4" />
-            File Version & Edit Inspector ({hotFiles.length})
+            فاحص إصدارات وتعديلات الملفات ({hotFiles.length})
           </button>
 
           <button
@@ -655,180 +686,180 @@ export default function App() {
                 openUserInspector(usersList[0].actor);
               }
             }}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition ${
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition ${
               activeTab === 'users'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
                 : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
             }`}
           >
             <Users className="w-4 h-4" />
-            User Forensics Profiler ({usersList.length})
+            سجل نشاط المستخدمين ({usersList.length})
           </button>
 
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition ${
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition ${
               activeTab === 'analytics'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
                 : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
             }`}
           >
             <Activity className="w-4 h-4" />
-            System Telemetry & Breakdown
+            إحصائيات وتحليلات النظام
           </button>
         </div>
 
-        {/* TAB 1: LIVE AUDIT EXPLORER */}
+        {/* التبويب الأول: مستكشف سجل التدقيق المباشر */}
         {activeTab === 'explorer' && (
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
             <div className="xl:col-span-8 space-y-4">
-              {/* Filter Bar */}
+              {/* شريط الفلترة والبحث */}
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-400 uppercase mb-1">
-                      Search File / Path
+                    <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                      البحث باسم الملف أو المسار
                     </label>
                     <div className="relative">
-                      <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
+                      <Search className="w-3.5 h-3.5 text-slate-500 absolute right-3 top-2.5" />
                       <input
                         type="text"
                         value={fileQuery}
                         onChange={(e) => setFileQuery(e.target.value)}
-                        placeholder="e.g. invoices (8).xlsx..."
-                        className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-100 outline-none"
+                        placeholder="مثال: invoices (8).xlsx..."
+                        className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg pr-8 pl-3 py-1.5 text-xs text-slate-100 outline-none"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-400 uppercase mb-1">
-                      User (Who)
+                    <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                      المستخدم (من قام بالعملية)
                     </label>
                     <select
                       value={actorFilter}
                       onChange={(e) => setActorFilter(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-xs text-slate-100 outline-none"
                     >
-                      <option value="">All Users</option>
+                      <option value="">جميع المستخدمين</option>
                       {usersList.map((u) => (
                         <option key={u.actor} value={u.actor}>
-                          👤 {u.actor} ({u.edits} edits, {u.event_count} events)
+                          👤 {u.actor} ({u.edits} تعديل، {u.event_count} حدث)
                         </option>
                       ))}
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-400 uppercase mb-1">
-                      Action (Did What)
+                    <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                      نوع العملية (ماذا فعل)
                     </label>
                     <select
                       value={actionFilter}
                       onChange={(e) => setActionFilter(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-xs text-slate-100 outline-none"
                     >
-                      <option value="">All Actions</option>
-                      <option value="FILE_EDITED">✏️ File Edited / Saved</option>
-                      <option value="FILE_CREATED">➕ File Created / Uploaded</option>
-                      <option value="FILE_VIEWED">👁️ File Opened / Viewed</option>
-                      <option value="FILE_RENAMED">🔀 File Renamed / Moved</option>
-                      <option value="FILE_DELETED">🗑️ File Deleted</option>
-                      <option value="FILE_SHARED">🔗 Shared (User / Group)</option>
-                      <option value="FILE_SHARED_PUBLIC">🌐 Shared (Public Link)</option>
-                      <option value="USER_LOGIN">🔑 User Login</option>
-                      <option value="USER_LOGIN_FAILED">🚨 Failed Login</option>
+                      <option value="">جميع العمليات</option>
+                      <option value="FILE_EDITED">✏️ تعديل / حفظ ملف</option>
+                      <option value="FILE_CREATED">➕ إنشاء / رفع ملف</option>
+                      <option value="FILE_VIEWED">👁️ فتح / عرض ملف</option>
+                      <option value="FILE_RENAMED">🔀 إعادة تسمية / نقل ملف</option>
+                      <option value="FILE_DELETED">🗑️ حذف ملف</option>
+                      <option value="FILE_SHARED">🔗 مشاركة داخلية (مستخدم/مجموعة)</option>
+                      <option value="FILE_SHARED_PUBLIC">🌐 مشاركة عبر رابط عام</option>
+                      <option value="USER_LOGIN">🔑 تسجيل دخول ناجح</option>
+                      <option value="USER_LOGIN_FAILED">🚨 محاولة دخول فاشلة</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-400 uppercase mb-1">
-                      Editor / Client App
+                    <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                      البرنامج / أداة التعديل
                     </label>
                     <select
                       value={clientFilter}
                       onChange={(e) => setClientFilter(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-xs text-slate-100 outline-none"
                     >
-                      <option value="">All Clients</option>
-                      <option value="Collabora Office">Collabora Office (Live Edit)</option>
-                      <option value="Web Browser">Web Browser</option>
-                      <option value="Desktop Sync">Desktop Sync Client</option>
-                      <option value="Mobile App">Mobile App</option>
+                      <option value="">جميع البرامج والأجهزة</option>
+                      <option value="Collabora Office">محرر المستندات المباشر (Collabora Office)</option>
+                      <option value="Web Browser">متصفح الويب</option>
+                      <option value="Desktop Sync">تطبيق مزامنة سطح المكتب</option>
+                      <option value="Mobile App">تطبيق الهاتف المحمول</option>
                     </select>
                   </div>
                 </div>
 
-                {/* Quick Filter Pills */}
+                {/* أزرار الفلترة السريعة */}
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       onClick={() => setExcludeViews(!excludeViews)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium border transition ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border transition ${
                         excludeViews
                           ? 'bg-blue-600/20 text-blue-300 border-blue-500/40'
                           : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
                       }`}
                     >
                       <Filter className="w-3.5 h-3.5" />
-                      {excludeViews ? 'Showing Edits & Changes Only' : 'Hide Read/View Events'}
+                      {excludeViews ? 'يتم عرض التعديلات والتغييرات فقط' : 'إخفاء أحداث القراءة والعرض فقط'}
                     </button>
 
                     <button
                       onClick={() => setAnomaliesOnly(!anomaliesOnly)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium border transition ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border transition ${
                         anomaliesOnly
                           ? 'bg-rose-600/20 text-rose-300 border-rose-500/40'
                           : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
                       }`}
                     >
                       <AlertTriangle className="w-3.5 h-3.5" />
-                      {anomaliesOnly ? 'Showing Security Alerts Only' : 'Security Alerts Only'}
+                      {anomaliesOnly ? 'يتم عرض التنبيهات الأمنية فقط' : 'عرض التنبيهات الأمنية فقط'}
                     </button>
                   </div>
 
                   <button
                     onClick={resetFilters}
-                    className="text-xs text-slate-400 hover:text-white underline"
+                    className="text-xs text-slate-400 hover:text-white underline font-medium"
                   >
-                    Reset Filters
+                    إعادة تعيين الفلاتر
                   </button>
                 </div>
               </div>
 
-              {/* Events Table */}
+              {/* جدول الأحداث */}
               <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-white">
-                    Chronological Audit Trail (Who Did What & When)
+                  <h2 className="text-sm font-bold text-white">
+                    السجل الزمني الكامل للتدقيق (من قام بماذا ومتى)
                   </h2>
                   <span className="text-xs text-slate-400">
-                    Showing {eventsData.events?.length || 0} of {eventsData.total || 0} events
+                    عرض {eventsData.events?.length || 0} من أصل {eventsData.total || 0} حدث
                   </span>
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
+                  <table className="w-full text-right border-collapse">
                     <thead>
-                      <tr className="border-b border-slate-800 bg-slate-950/60 text-[11px] font-semibold uppercase text-slate-400">
-                        <th className="py-3 px-4">When (UTC)</th>
-                        <th className="py-3 px-4">Who (User)</th>
-                        <th className="py-3 px-4">Did What & Version</th>
-                        <th className="py-3 px-4">File / Resource (Click to Inspect)</th>
-                        <th className="py-3 px-4">Client / Editor</th>
+                      <tr className="border-b border-slate-800 bg-slate-950/60 text-[11px] font-bold text-slate-400">
+                        <th className="py-3 px-4">التاريخ والوقت (UTC)</th>
+                        <th className="py-3 px-4">المستخدم (مَن)</th>
+                        <th className="py-3 px-4">العملية ورقم الإصدار</th>
+                        <th className="py-3 px-4">الملف / المجلد (اضغط لعرض سجل الإصدارات)</th>
+                        <th className="py-3 px-4">أداة التعديل / الجهاز</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/70 text-xs">
                       {loading ? (
                         <tr>
                           <td colSpan={5} className="py-12 text-center text-slate-400">
-                            Loading real-time audit events...
+                            جارٍ تحميل سجل التدقيق المباشر...
                           </td>
                         </tr>
                       ) : !eventsData.events || eventsData.events.length === 0 ? (
                         <tr>
                           <td colSpan={5} className="py-12 text-center text-slate-400">
-                            No matching audit events found.
+                            لا توجد أحداث مطابقة لمعايير البحث الحالية.
                           </td>
                         </tr>
                       ) : (
@@ -838,7 +869,7 @@ export default function App() {
                             className="hover:bg-slate-800/40 transition group"
                           >
                             <td className="py-3 px-4 whitespace-nowrap">
-                              <div className="font-mono text-slate-200">
+                              <div dir="ltr" className="font-mono text-slate-200 inline-block">
                                 {formatUtcTimestamp(ev.timestamp)}
                               </div>
                               <div className="text-[11px] text-slate-400">
@@ -849,12 +880,12 @@ export default function App() {
                             <td className="py-3 px-4 whitespace-nowrap">
                               <button
                                 onClick={() => openUserInspector(ev.actor)}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 hover:bg-blue-600/20 hover:text-blue-300 border border-slate-700 hover:border-blue-500/40 font-semibold text-slate-200 transition"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 hover:bg-blue-600/20 hover:text-blue-300 border border-slate-700 hover:border-blue-500/40 font-bold text-slate-200 transition"
                               >
                                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                                {ev.actor}
+                                <span dir="ltr">{ev.actor}</span>
                               </button>
-                              <div className="text-[10px] font-mono text-slate-400 mt-1 pl-1">
+                              <div dir="ltr" className="text-[10px] font-mono text-slate-400 mt-1">
                                 IP: {ev.ip_address}
                               </div>
                             </td>
@@ -871,26 +902,26 @@ export default function App() {
                                 <div>
                                   <button
                                     onClick={() => openFileInspector(ev.file_path)}
-                                    className="text-left font-medium text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1.5 break-all"
+                                    className="text-right font-semibold text-blue-400 hover:text-blue-300 hover:underline inline-flex items-center gap-1.5 break-all"
                                   >
                                     {ev.file_path.endsWith('.xlsx') ? (
                                       <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
                                     ) : (
                                       <FileText className="w-4 h-4 text-blue-400 shrink-0" />
                                     )}
-                                    <span>{ev.file_path}</span>
+                                    <span dir="ltr">{ev.file_path}</span>
                                   </button>
                                   {ev.previous_path && (
                                     <div className="text-[11px] text-purple-300 mt-1">
-                                      ↳ Renamed from:{' '}
-                                      <code className="bg-slate-950 px-1.5 py-0.5 rounded">
+                                      ↳ تمت إعادة تسميته من:{' '}
+                                      <code dir="ltr" className="bg-slate-950 px-1.5 py-0.5 rounded">
                                         {ev.previous_path}
                                       </code>
                                     </div>
                                   )}
                                   {ev.share_target && (
                                     <div className="text-[11px] text-amber-300 mt-1">
-                                      ↳ Shared with: <strong>{ev.share_target}</strong>
+                                      ↳ تمت مشاركته مع: <strong dir="ltr">{ev.share_target}</strong>
                                     </div>
                                   )}
                                 </div>
@@ -898,7 +929,7 @@ export default function App() {
                                 <span className="text-slate-400">{ev.raw_message}</span>
                               )}
                               {ev.is_anomaly === 1 && (
-                                <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/40 text-rose-300 text-[11px] font-medium">
+                                <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/40 text-rose-300 text-[11px] font-semibold">
                                   <AlertTriangle className="w-3 h-3" />
                                   {ev.anomaly_reason}
                                 </div>
@@ -917,20 +948,20 @@ export default function App() {
               </div>
             </div>
 
-            {/* Right 4 Cols: Hot Files & Active Users */}
+            {/* العمود الجانبي الأيسر: أكثر الملفات تعديلاً ونشاط المستخدمين */}
             <div className="xl:col-span-4 space-y-6">
               <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
                     <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-                    Edited Files & Version History
+                    الملفات المعدلة وسجل الإصدارات
                   </h3>
-                  <span className="text-[11px] text-slate-400">Click file to inspect</span>
+                  <span className="text-[11px] text-slate-400">اضغط على الملف للفحص</span>
                 </div>
                 <div className="divide-y divide-slate-800/70">
                   {hotFiles.length === 0 ? (
                     <div className="p-6 text-center text-xs text-slate-400">
-                      No file edits recorded yet.
+                      لا توجد ملفات معدلة مسجلة حتى الآن.
                     </div>
                   ) : (
                     hotFiles.map((f) => (
@@ -940,17 +971,17 @@ export default function App() {
                         className="p-3.5 hover:bg-slate-800/50 cursor-pointer transition flex items-center justify-between gap-3"
                       >
                         <div className="min-w-0">
-                          <div className="text-xs font-semibold text-blue-400 truncate flex items-center gap-1.5">
+                          <div className="text-xs font-bold text-blue-400 truncate flex items-center gap-1.5">
                             {f.file_path.endsWith('.xlsx') ? (
                               <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                             ) : (
                               <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                             )}
-                            <span className="truncate">{f.file_path}</span>
+                            <span dir="ltr" className="truncate">{f.file_path}</span>
                           </div>
                           <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-2">
                             <span>
-                              Editors: <strong className="text-slate-200">{f.collaborators || 'admin'}</strong>
+                              المحررون: <strong dir="ltr" className="text-slate-200">{f.collaborators || 'admin'}</strong>
                             </span>
                             <span>•</span>
                             <span>{formatRelativeTime(f.last_modified)}</span>
@@ -958,13 +989,13 @@ export default function App() {
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                          <span dir="ltr" className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30">
                             v{f.latest_version || 1}
                           </span>
-                          <span className="px-2 py-0.5 rounded text-xs font-semibold bg-blue-500/15 text-blue-300">
-                            {f.edit_count} {f.edit_count === 1 ? 'edit' : 'edits'}
+                          <span className="px-2 py-0.5 rounded text-xs font-bold bg-blue-500/15 text-blue-300">
+                            {f.edit_count} تعديل
                           </span>
-                          <ChevronRight className="w-4 h-4 text-slate-500" />
+                          <ChevronLeft className="w-4 h-4 text-slate-500" />
                         </div>
                       </div>
                     ))
@@ -974,11 +1005,11 @@ export default function App() {
 
               <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
                     <Users className="w-4 h-4 text-amber-400" />
-                    User Attribution Summary
+                    ملخص نشاط المستخدمين
                   </h3>
-                  <span className="text-[11px] text-slate-400">Click user for profile</span>
+                  <span className="text-[11px] text-slate-400">اضغط لعرض ملف المستخدم</span>
                 </div>
                 <div className="divide-y divide-slate-800/70">
                   {usersList.map((u) => (
@@ -990,26 +1021,26 @@ export default function App() {
                       <div>
                         <div className="text-xs font-bold text-white flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                          {u.actor}
+                          <span dir="ltr">{u.actor}</span>
                         </div>
                         <div className="text-[11px] text-slate-400 mt-0.5">
-                          Last active: {formatRelativeTime(u.last_active)}
+                          آخر نشاط: {formatRelativeTime(u.last_active)}
                         </div>
                       </div>
                       <div className="flex items-center gap-3 text-xs">
                         <div className="text-center">
                           <div className="font-bold text-blue-400">{u.edits}</div>
-                          <div className="text-[10px] text-slate-400">Edits</div>
+                          <div className="text-[10px] text-slate-400">تعديلات</div>
                         </div>
                         <div className="text-center">
                           <div className="font-bold text-cyan-300">{u.views}</div>
-                          <div className="text-[10px] text-slate-400">Views</div>
+                          <div className="text-[10px] text-slate-400">مشاهدات</div>
                         </div>
                         <div className="text-center">
                           <div className="font-bold text-amber-300">{u.shares}</div>
-                          <div className="text-[10px] text-slate-400">Shares</div>
+                          <div className="text-[10px] text-slate-400">مشاركات</div>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-slate-500" />
+                        <ChevronLeft className="w-4 h-4 text-slate-500" />
                       </div>
                     </div>
                   ))}
@@ -1019,33 +1050,33 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 2: FILE VERSION & LINEAGE INSPECTOR */}
+        {/* التبويب الثاني: فاحص إصدارات وتعديلات الملفات */}
         {activeTab === 'files' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden h-fit">
               <div className="px-4 py-3 border-b border-slate-800">
-                <h3 className="text-sm font-semibold text-white">Select File to Inspect</h3>
+                <h3 className="text-sm font-bold text-white">اختر ملفاً لفحص سجل تعديلاته</h3>
               </div>
               <div className="divide-y divide-slate-800">
                 {hotFiles.map((f) => (
                   <button
                     key={f.file_path}
                     onClick={() => openFileInspector(f.file_path)}
-                    className={`w-full text-left p-3.5 transition flex items-center justify-between ${
+                    className={`w-full text-right p-3.5 transition flex items-center justify-between ${
                       selectedFile === f.file_path
-                        ? 'bg-blue-600/15 border-l-4 border-blue-500'
+                        ? 'bg-blue-600/15 border-r-4 border-blue-500'
                         : 'hover:bg-slate-800/50'
                     }`}
                   >
-                    <div className="min-w-0 pr-2">
-                      <div className="text-xs font-semibold text-slate-100 truncate">
+                    <div className="min-w-0 pl-2">
+                      <div dir="ltr" className="text-xs font-bold text-slate-100 truncate text-right">
                         {f.file_path}
                       </div>
                       <div className="text-[11px] text-slate-400 mt-0.5">
-                        {f.edit_count} edits • Collaborators: {f.collaborators}
+                        {f.edit_count} تعديل • المحررون: <span dir="ltr">{f.collaborators}</span>
                       </div>
                     </div>
-                    <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                    <span dir="ltr" className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30">
                       v{f.latest_version || 1}
                     </span>
                   </button>
@@ -1058,38 +1089,40 @@ export default function App() {
                 <FileTimelinePanel data={fileTimeline} onSelectUser={openUserInspector} />
               ) : (
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center text-sm text-slate-400">
-                  Select a file from the left panel to inspect its complete edit history and Nextcloud disk snapshots.
+                  اختر ملفاً من القائمة اليمنى لاستعراض سجل تعديلاته الكامل ونسخ الإصدارات المحفوظة على القرص.
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* TAB 3: USER FORENSICS PROFILER */}
+        {/* التبويب الثالث: سجل نشاط المستخدمين */}
         {activeTab === 'users' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden h-fit">
               <div className="px-4 py-3 border-b border-slate-800">
-                <h3 className="text-sm font-semibold text-white">Tracked Users</h3>
+                <h3 className="text-sm font-bold text-white">المستخدمون المسجلون</h3>
               </div>
               <div className="divide-y divide-slate-800">
                 {usersList.map((u) => (
                   <button
                     key={u.actor}
                     onClick={() => openUserInspector(u.actor)}
-                    className={`w-full text-left p-3.5 transition flex items-center justify-between ${
+                    className={`w-full text-right p-3.5 transition flex items-center justify-between ${
                       selectedUser === u.actor
-                        ? 'bg-blue-600/15 border-l-4 border-blue-500'
+                        ? 'bg-blue-600/15 border-r-4 border-blue-500'
                         : 'hover:bg-slate-800/50'
                     }`}
                   >
                     <div>
-                      <div className="text-xs font-bold text-white">👤 {u.actor}</div>
-                      <div className="text-[11px] text-slate-400">
-                        {u.edits} edits • {u.views} views • {u.event_count} total events
+                      <div className="text-xs font-bold text-white">
+                        👤 <span dir="ltr">{u.actor}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">
+                        {u.edits} تعديل • {u.views} مشاهدة • {u.event_count} إجمالي الأحداث
                       </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                    <ChevronLeft className="w-4 h-4 text-slate-400" />
                   </button>
                 ))}
               </div>
@@ -1101,11 +1134,11 @@ export default function App() {
                   <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
                     <div>
                       <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                        👤 User Forensic Dossier: <span className="text-blue-400">{userProfile.actor}</span>
+                        👤 التقرير التفصيلي للمستخدم: <span dir="ltr" className="text-blue-400">{userProfile.actor}</span>
                       </h2>
                       <p className="text-xs text-slate-400 mt-1">
-                        First Seen: {formatUtcTimestamp(userProfile.summary?.first_seen)} • Last Seen:{' '}
-                        {formatUtcTimestamp(userProfile.summary?.last_seen)}
+                        أول ظهور: <span dir="ltr">{formatUtcTimestamp(userProfile.summary?.first_seen)}</span> • آخر نشاط:{' '}
+                        <span dir="ltr">{formatUtcTimestamp(userProfile.summary?.last_seen)}</span>
                       </p>
                     </div>
                     <button
@@ -1113,42 +1146,42 @@ export default function App() {
                         setActorFilter(userProfile.actor);
                         setActiveTab('explorer');
                       }}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white"
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white"
                     >
-                      Filter All Audit Logs for {userProfile.actor}
+                      عرض جميع سجلات {userProfile.actor}
                     </button>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="bg-slate-950 border border-slate-800 rounded-lg p-3">
-                      <div className="text-[11px] text-slate-400">File Edits</div>
+                      <div className="text-[11px] text-slate-400">تعديلات الملفات</div>
                       <div className="text-xl font-bold text-blue-400 mt-0.5">
                         {userProfile.summary?.edits || 0}
                       </div>
                     </div>
                     <div className="bg-slate-950 border border-slate-800 rounded-lg p-3">
-                      <div className="text-[11px] text-slate-400">Files Created</div>
+                      <div className="text-[11px] text-slate-400">ملفات تم إنشاؤها</div>
                       <div className="text-xl font-bold text-emerald-400 mt-0.5">
                         {userProfile.summary?.created || 0}
                       </div>
                     </div>
                     <div className="bg-slate-950 border border-slate-800 rounded-lg p-3">
-                      <div className="text-[11px] text-slate-400">Files Viewed</div>
+                      <div className="text-[11px] text-slate-400">ملفات تم عرضها</div>
                       <div className="text-xl font-bold text-cyan-300 mt-0.5">
                         {userProfile.summary?.views || 0}
                       </div>
                     </div>
                     <div className="bg-slate-950 border border-slate-800 rounded-lg p-3">
-                      <div className="text-[11px] text-slate-400">Known IPs</div>
-                      <div className="text-xs font-mono text-slate-200 mt-1 truncate">
+                      <div className="text-[11px] text-slate-400">عناوين IP المستخدمة</div>
+                      <div dir="ltr" className="text-xs font-mono text-slate-200 mt-1 truncate text-right">
                         {(userProfile.ip_addresses || []).join(', ') || '—'}
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <h4 className="text-xs font-semibold uppercase text-slate-400 mb-3">
-                      Files Created, Edited or Accessed by {userProfile.actor}
+                    <h4 className="text-xs font-bold text-slate-400 mb-3">
+                      الملفات التي قام المستخدم {userProfile.actor} بإنشائها أو تعديلها أو استعراضها
                     </h4>
                     <div className="divide-y divide-slate-800 border border-slate-800 rounded-lg overflow-hidden">
                       {(userProfile.touched_files || []).map((tf) => (
@@ -1157,15 +1190,15 @@ export default function App() {
                           onClick={() => openFileInspector(tf.file_path)}
                           className="p-3 bg-slate-950/50 hover:bg-slate-800/50 cursor-pointer flex items-center justify-between text-xs"
                         >
-                          <span className="font-medium text-blue-400">{tf.file_path}</span>
+                          <span dir="ltr" className="font-bold text-blue-400">{tf.file_path}</span>
                           <div className="flex items-center gap-3">
-                            <span className="text-slate-300">{tf.edits} edits</span>
+                            <span className="text-slate-300">{tf.edits} تعديل</span>
                             {tf.max_version && (
-                              <span className="px-2 py-0.5 rounded font-mono bg-sky-500/15 text-sky-300">
+                              <span dir="ltr" className="px-2 py-0.5 rounded font-mono bg-sky-500/15 text-sky-300">
                                 v{tf.max_version}
                               </span>
                             )}
-                            <span className="text-slate-400 font-mono">
+                            <span dir="ltr" className="text-slate-400 font-mono">
                               {formatUtcTimestamp(tf.last_touched)}
                             </span>
                           </div>
@@ -1179,22 +1212,23 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 4: SYSTEM TELEMETRY & BREAKDOWN */}
+        {/* التبويب الرابع: إحصائيات وتحليلات النظام */}
         {activeTab === 'analytics' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-              <h3 className="text-sm font-semibold text-white mb-4">
-                Events by Action Type
+              <h3 className="text-sm font-bold text-white mb-4">
+                توزيع الأحداث حسب نوع العملية
               </h3>
               <div className="space-y-3">
                 {byAction.map((a) => {
                   const pct = ov.total_events
                     ? Math.round((a.count / ov.total_events) * 100)
                     : 0;
+                  const label = ACTION_META[a.action_type]?.label || a.action_type;
                   return (
                     <div key={a.action_type} className="space-y-1">
                       <div className="flex justify-between text-xs">
-                        <span className="font-medium text-slate-200">{a.action_type}</span>
+                        <span className="font-semibold text-slate-200">{label}</span>
                         <span className="text-slate-400">
                           {a.count} ({pct}%)
                         </span>
@@ -1212,8 +1246,8 @@ export default function App() {
             </div>
 
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-              <h3 className="text-sm font-semibold text-white mb-4">
-                Events by Client / Editor Application
+              <h3 className="text-sm font-bold text-white mb-4">
+                توزيع الأحداث حسب البرنامج / أداة التعديل
               </h3>
               <div className="space-y-3">
                 {byClient.map((c) => {
@@ -1223,7 +1257,9 @@ export default function App() {
                   return (
                     <div key={c.client_source} className="space-y-1">
                       <div className="flex justify-between text-xs">
-                        <span className="font-medium text-slate-200">{c.client_source}</span>
+                        <span className="font-semibold text-slate-200">
+                          {translateClientSource(c.client_source)}
+                        </span>
                         <span className="text-slate-400">
                           {c.count} ({pct}%)
                         </span>
@@ -1243,7 +1279,7 @@ export default function App() {
         )}
       </div>
 
-      {/* Slide-over Modal when clicking a file from the Explorer tab */}
+      {/* نافذة منبثقة لفحص تاريخ الملف وإصداراته */}
       {selectedFile && activeTab === 'explorer' && (
         <div
           className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
@@ -1256,7 +1292,7 @@ export default function App() {
               <div className="flex items-center gap-2.5">
                 <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
                 <h3 className="text-base font-bold text-white">
-                  File Version & Chain-of-Custody Inspector
+                  فاحص سجل تعديلات الملف وسلسلة الإصدارات الكاملة
                 </h3>
               </div>
               <button
@@ -1269,7 +1305,7 @@ export default function App() {
             <div className="p-6 overflow-y-auto">
               {loadingTimeline ? (
                 <div className="py-12 text-center text-sm text-slate-400">
-                  Querying PostgreSQL oc_filecache & audit history...
+                  جارٍ استرجاع سجل الإصدارات من قاعدة بيانات PostgreSQL...
                 </div>
               ) : fileTimeline ? (
                 <FileTimelinePanel
@@ -1291,42 +1327,42 @@ export default function App() {
 function FileTimelinePanel({ data, onSelectUser }) {
   const storageVersions = data.storage_versions || [];
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-6">
+    <div dir="rtl" className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-6">
       <div className="border-b border-slate-800 pb-4 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h3 className="text-base font-bold text-white flex items-center gap-2 break-all">
-            📄 {data.requested_path}
+            📄 <span dir="ltr">{data.requested_path}</span>
           </h3>
           {data.known_aliases && data.known_aliases.length > 1 && (
             <p className="text-xs text-purple-300 mt-1">
-              Tracked across renames: {data.known_aliases.join(' ↔ ')}
+              تم تتبعه عبر تغييرات الأسماء: <span dir="ltr">{data.known_aliases.join(' ↔ ')}</span>
             </p>
           )}
         </div>
         <div className="flex items-center gap-2">
-          <span className="px-3 py-1 rounded-lg text-xs font-mono font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30">
-            Total Versions: {Math.max(data.total_versions || 0, storageVersions.length)}
+          <span className="px-3 py-1 rounded-lg text-xs font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30">
+            إجمالي الإصدارات المحفوظة: {Math.max(data.total_versions || 0, storageVersions.length)}
           </span>
         </div>
       </div>
 
-      {/* Editors & Viewers */}
+      {/* المحررون والمشاهدون */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-slate-950 border border-slate-800 rounded-lg p-3.5">
-          <div className="text-[11px] font-semibold uppercase text-slate-400 mb-2">
-            ✏️ Verified Editors (Who Modified This File)
+          <div className="text-[11px] font-bold text-slate-400 mb-2">
+            ✏️ المحررون الموثقون (من قام بإنشاء أو تعديل هذا الملف)
           </div>
           <div className="flex flex-wrap gap-1.5">
             {(data.editors || []).length === 0 ? (
-              <span className="text-xs text-slate-400">None</span>
+              <span className="text-xs text-slate-400">لا يوجد</span>
             ) : (
               data.editors.map((u) => (
                 <button
                   key={u}
                   onClick={() => onSelectUser && onSelectUser(u)}
-                  className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-300 border border-blue-500/30 hover:bg-blue-500/25"
+                  className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30 hover:bg-blue-500/25"
                 >
-                  👤 {u}
+                  👤 <span dir="ltr">{u}</span>
                 </button>
               ))
             )}
@@ -1334,20 +1370,20 @@ function FileTimelinePanel({ data, onSelectUser }) {
         </div>
 
         <div className="bg-slate-950 border border-slate-800 rounded-lg p-3.5">
-          <div className="text-[11px] font-semibold uppercase text-slate-400 mb-2">
-            👁️ Verified Viewers / Readers
+          <div className="text-[11px] font-bold text-slate-400 mb-2">
+            👁️ المشاهدون / المستعرضون للملف
           </div>
           <div className="flex flex-wrap gap-1.5">
             {(data.viewers || []).length === 0 ? (
-              <span className="text-xs text-slate-400">None</span>
+              <span className="text-xs text-slate-400">لا يوجد</span>
             ) : (
               data.viewers.map((u) => (
                 <button
                   key={u}
                   onClick={() => onSelectUser && onSelectUser(u)}
-                  className="px-2.5 py-1 rounded-full text-xs font-semibold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/25"
+                  className="px-2.5 py-1 rounded-full text-xs font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/25"
                 >
-                  👤 {u}
+                  👤 <span dir="ltr">{u}</span>
                 </button>
               ))
             )}
@@ -1355,42 +1391,42 @@ function FileTimelinePanel({ data, onSelectUser }) {
         </div>
       </div>
 
-      {/* Physical Storage Versions from Nextcloud PostgreSQL oc_filecache */}
+      {/* النسخ الفعلية المخزنة على القرص من قاعدة بيانات Nextcloud */}
       {storageVersions.length > 0 && (
         <div>
-          <h4 className="text-xs font-semibold uppercase text-slate-400 mb-2.5 flex items-center gap-1.5">
+          <h4 className="text-xs font-bold text-slate-300 mb-2.5 flex items-center gap-1.5">
             <HardDrive className="w-3.5 h-3.5 text-emerald-400" />
-            Nextcloud Physical Disk Snapshots (oc_filecache & files_versions)
+            نسخ وإصدارات الملف الفعلية المحفوظة على الخادم (oc_filecache & files_versions)
           </h4>
           <div className="overflow-x-auto border border-slate-800 rounded-lg">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-950 text-[11px] uppercase text-slate-400 border-b border-slate-800">
+            <table className="w-full text-right text-xs">
+              <thead className="bg-slate-950 text-[11px] font-bold text-slate-400 border-b border-slate-800">
                 <tr>
-                  <th className="py-2 px-3">Snapshot</th>
-                  <th className="py-2 px-3">Timestamp (UTC)</th>
-                  <th className="py-2 px-3">File Size</th>
-                  <th className="py-2 px-3">Size Delta</th>
-                  <th className="py-2 px-3">ETag Checksum</th>
+                  <th className="py-2.5 px-3">رقم الإصدار</th>
+                  <th className="py-2.5 px-3">التاريخ والوقت (UTC)</th>
+                  <th className="py-2.5 px-3">حجم الملف</th>
+                  <th className="py-2.5 px-3">مقدار التغير في الحجم</th>
+                  <th className="py-2.5 px-3">بصمة الملف (ETag)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 bg-slate-950/40">
                 {storageVersions.map((sv) => (
                   <tr key={sv.fileid}>
-                    <td className="py-2 px-3 font-mono font-bold text-sky-300">
-                      v{sv.version_index}{' '}
+                    <td className="py-2.5 px-3 font-mono font-bold text-sky-300">
+                      <span dir="ltr">v{sv.version_index}</span>{' '}
                       {sv.is_current && (
-                        <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                          LIVE
+                        <span className="mr-1.5 px-1.5 py-0.5 text-[10px] rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          النسخة الحالية
                         </span>
                       )}
                     </td>
-                    <td className="py-2 px-3 font-mono text-slate-200">
+                    <td dir="ltr" className="py-2.5 px-3 font-mono text-slate-200 text-right">
                       {formatUtcTimestamp(sv.timestamp)}
                     </td>
-                    <td className="py-2 px-3 font-mono text-slate-200">
+                    <td className="py-2.5 px-3 font-semibold text-slate-200">
                       {formatBytes(sv.size_bytes)}
                     </td>
-                    <td className="py-2 px-3 font-mono">
+                    <td className="py-2.5 px-3 font-semibold">
                       <span
                         className={
                           sv.size_delta_bytes >= 0 ? 'text-emerald-400' : 'text-rose-400'
@@ -1400,7 +1436,7 @@ function FileTimelinePanel({ data, onSelectUser }) {
                         {formatBytes(sv.size_delta_bytes)}
                       </span>
                     </td>
-                    <td className="py-2 px-3 font-mono text-[11px] text-slate-400">
+                    <td dir="ltr" className="py-2.5 px-3 font-mono text-[11px] text-slate-400 text-right">
                       {sv.etag?.substring(0, 14)}...
                     </td>
                   </tr>
@@ -1411,35 +1447,37 @@ function FileTimelinePanel({ data, onSelectUser }) {
         </div>
       )}
 
-      {/* Chronological Event Chain */}
+      {/* السجل الزمني التفصيلي */}
       <div>
-        <h4 className="text-xs font-semibold uppercase text-slate-400 mb-3 flex items-center gap-1.5">
+        <h4 className="text-xs font-bold text-slate-300 mb-3 flex items-center gap-1.5">
           <Clock className="w-3.5 h-3.5 text-blue-400" />
-          Complete Audit Chain of Custody (Newest First)
+          السجل الزمني الكامل لتعديلات وعمليات الملف (من الأحدث إلى الأقدم)
         </h4>
-        <div className="space-y-3 border-l-2 border-slate-800 ml-2 pl-4">
+        <div className="space-y-3 border-r-2 border-slate-800 mr-2 pr-4">
           {(data.timeline || []).map((ev) => (
             <div
               key={ev.id}
               className="bg-slate-950/70 border border-slate-800/90 rounded-lg p-3 relative"
             >
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 absolute -left-[21px] top-4 ring-4 ring-slate-900" />
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 absolute -right-[21px] top-4 ring-4 ring-slate-900" />
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <ActionBadge action={ev.action_type} version={ev.version_number} />
-                  <span className="text-xs font-bold text-white">by {ev.actor}</span>
+                  <span className="text-xs font-bold text-white">
+                    بواسطة: <span dir="ltr" className="text-blue-300">{ev.actor}</span>
+                  </span>
                   <ClientIcon source={ev.client_source} />
                 </div>
-                <span className="text-xs font-mono text-slate-400">
-                  {formatUtcTimestamp(ev.timestamp)} ({formatRelativeTime(ev.timestamp)})
+                <span className="text-xs text-slate-400">
+                  <span dir="ltr" className="font-mono">{formatUtcTimestamp(ev.timestamp)}</span> ({formatRelativeTime(ev.timestamp)})
                 </span>
               </div>
               <div className="text-[11px] text-slate-400 mt-1.5 flex flex-wrap gap-3">
-                <span>Path: <code className="text-slate-300">{ev.file_path}</code></span>
-                <span>IP: <code className="text-slate-300">{ev.ip_address}</code></span>
+                <span>المسار: <code dir="ltr" className="text-slate-300">{ev.file_path}</code></span>
+                <span>عنوان IP: <code dir="ltr" className="text-slate-300">{ev.ip_address}</code></span>
                 {ev.previous_path && (
                   <span className="text-purple-300">
-                    Renamed from: <code>{ev.previous_path}</code>
+                    الاسم السابق: <code dir="ltr">{ev.previous_path}</code>
                   </span>
                 )}
               </div>
