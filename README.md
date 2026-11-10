@@ -16,7 +16,7 @@ Running Nextcloud + Collabora Online + PostgreSQL + Redis on an 8 GB RAM VPS req
 | **`nextcloud-cron`**| Nextcloud Background | `512 MB` | `0.5 vCPU` | Background indexing, preview generation (`concurrency=4`), version/trash retention |
 | **`redis`** | Redis 7 Alpine | `256 MB` | `0.5 vCPU` | Transactional file locking (`allkeys-lru`, `192MB` maxmemory) to prevent edit conflicts |
 | **`audit-dashboard`**| FastAPI + SQLite WAL | `256 MB` | `0.5 vCPU` | Real-time `audit.log` tailer, Version Lineage Tracker, Anomaly Detector & Forensics Web UI |
-| **`caddy`** | Caddy 2 Alpine | `128 MB` | `0.5 vCPU` | Reverse proxy unifying Drive (`:8080`), Collabora WOPI, and Audit Portal (`/audit-portal/`) |
+| **`caddy`** | Caddy 2 Alpine | `128 MB` | `0.5 vCPU` | Reverse proxy unifying Drive (`:18440`), Collabora WOPI, and Audit Portal (`/audit-portal/`) |
 | **Total Ceiling** | **7 Containers** | **~6.25 GB** | **4.0 vCPU** | **Leaves ~1.75 GB RAM headroom for Linux kernel, filesystem cache & bursts** |
 
 ---
@@ -35,7 +35,7 @@ Running Nextcloud + Collabora Online + PostgreSQL + Redis on an 8 GB RAM VPS req
 
 ### Layer 3: Shehata Drive Audit & Forensics Dashboard (`audit-dashboard`)
 - Nextcloud's enterprise `admin_audit` app is automatically enabled via `scripts/configure-nextcloud.sh` at `loglevel=1`, emitting every event to `/var/log/nextcloud/audit.log`.
-- The custom **Audit & File Edit Tracker** (`http://localhost:8090` or `http://localhost:8080/audit-portal/`) tails this log in real time and provides:
+- The custom **Audit & File Edit Tracker** (`http://localhost:18490` or `http://localhost:18440/audit-portal/`) tails this log in real time and provides:
   - **Who**: Username, IP address, User-Agent, and Client Source (`Collabora Office (Live Edit)`, `Desktop Sync Client`, `Mobile App`, `Web Browser`, `WebDAV`).
   - **Did What**: `FILE_CREATED`, `FILE_EDITED`, `FILE_VIEWED`, `FILE_RENAMED`, `FILE_DELETED`, `FILE_RESTORED`, `VERSION_RESTORED`, `FILE_SHARED`, `FILE_SHARED_PUBLIC`, `PERMISSION_CHANGED`, `USER_LOGIN`, `USER_LOGIN_FAILED`.
   - **Rename-Aware Version Lineage**: If `/Draft.docx` (`v1`, `v2`) is renamed to `/Final_Spec.docx` and edited again (`v3`), clicking `/Final_Spec.docx` in the Audit Dashboard automatically links all historical names and shows the complete chain of custody (`v1 -> v2 -> rename -> v3`) and every user who ever touched it.
@@ -65,9 +65,9 @@ docker compose up -d --build
 *(Wait ~60–90 seconds on first boot while Nextcloud initializes PostgreSQL and runs `scripts/configure-nextcloud.sh` to enable `admin_audit`, `files_versions`, `activity`, and `richdocuments`.)*
 
 ### Step 4: Access Your Interfaces
-- **Shehata Drive (Nextcloud + Collabora Office)**: `http://localhost:8080`
+- **Company Files Vault (Nextcloud + Collabora Office)**: `http://localhost:18440`
   - Login with `NEXTCLOUD_ADMIN_USER` / `NEXTCLOUD_ADMIN_PASSWORD` from `.env`
-- **Audit & File Edit Forensics Dashboard**: `http://localhost:8090` (or `http://localhost:8080/audit-portal/`)
+- **Audit & File Edit Forensics Dashboard**: `http://localhost:18490` (or `http://localhost:18440/audit-portal/`)
   - Click **"⚡ Load Sample Activity"** in the top-right corner of the Audit Dashboard to immediately explore sample team edits, Collabora saves, file renames, and security alerts.
 
 ---

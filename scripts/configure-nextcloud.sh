@@ -56,7 +56,7 @@ $OCC config:system:set preview_concurrency_new --value=2 --type=integer
 $OCC config:app:set preview jpeg_quality --value="80"
 
 # 7. Configure Collabora Online (Nextcloud Office) for Real-Time Document Editing & Change Tracking
-PUBLIC_URL="${DRIVE_PROTOCOL:-http}://${DRIVE_DOMAIN:-localhost}:${DRIVE_PORT:-8080}"
+PUBLIC_URL="${DRIVE_PROTOCOL:-http}://${DRIVE_DOMAIN:-localhost}:${DRIVE_PORT:-18440}"
 $OCC config:system:set overwrite.cli.url --value="$PUBLIC_URL"
 $OCC config:system:set trusted_domains 0 --value="localhost"
 $OCC config:system:set trusted_domains 1 --value="${DRIVE_DOMAIN:-localhost}"

@@ -91,10 +91,10 @@ services:
       NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD:-ChangeMe_StrongAdminPass_2026!}
       NEXTCLOUD_TRUSTED_DOMAINS: "localhost ${DRIVE_DOMAIN:-localhost} nextcloud caddy"
       OVERWRITEPROTOCOL: ${DRIVE_PROTOCOL:-http}
-      OVERWRITECLIURL: "${DRIVE_PROTOCOL:-http}://${DRIVE_DOMAIN:-localhost}:${DRIVE_PORT:-8080}"
+      OVERWRITECLIURL: "${DRIVE_PROTOCOL:-http}://${DRIVE_DOMAIN:-localhost}:${DRIVE_PORT:-18440}"
       DRIVE_DOMAIN: ${DRIVE_DOMAIN:-localhost}
       DRIVE_PROTOCOL: ${DRIVE_PROTOCOL:-http}
-      DRIVE_PORT: ${DRIVE_PORT:-8080}
+      DRIVE_PORT: ${DRIVE_PORT:-18440}
       PHP_MEMORY_LIMIT: 512M
       PHP_UPLOAD_LIMIT: 16G
       TZ: ${TZ:-UTC}
@@ -152,7 +152,7 @@ services:
     cap_add:
       - MKNOD
     environment:
-      aliasgroup1: "https://.*:443,http://.*:8080,http://.*:80"
+      aliasgroup1: "https://.*:443,http://.*:18440,http://.*:80"
       username: ${COLLABORA_ADMIN_USER:-collabora_admin}
       password: ${COLLABORA_ADMIN_PASSWORD:-ChangeMe_CollaboraPass_2026!}
       dictionaries: ${COLLABORA_DICTIONARIES:-en_US ar}
@@ -199,7 +199,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeMe_StrongPostgresPass_2026!}
       TZ: ${TZ:-UTC}
     ports:
-      - "${AUDIT_PORT:-8090}:8090"
+      - "${AUDIT_PORT:-18490}:8090"
     volumes:
       - nextcloud_logs:/var/log/nextcloud:ro
       - audit_db_data:/data
@@ -226,7 +226,7 @@ services:
       - collabora
       - audit-dashboard
     ports:
-      - "${DRIVE_PORT:-8080}:80"
+      - "${DRIVE_PORT:-18440}:80"
     volumes:
       - ./config/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
