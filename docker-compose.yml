@@ -89,12 +89,13 @@ services:
       REDIS_HOST_PASSWORD: ${REDIS_PASSWORD:-ChangeMe_StrongRedisPass_2026!}
       NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER:-admin}
       NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD:-ChangeMe_StrongAdminPass_2026!}
-      NEXTCLOUD_TRUSTED_DOMAINS: "localhost ${DRIVE_DOMAIN:-localhost} nextcloud caddy"
-      OVERWRITEPROTOCOL: ${DRIVE_PROTOCOL:-http}
-      OVERWRITECLIURL: "${DRIVE_PROTOCOL:-http}://${DRIVE_DOMAIN:-localhost}:${DRIVE_PORT:-18440}"
-      DRIVE_DOMAIN: ${DRIVE_DOMAIN:-localhost}
-      DRIVE_PROTOCOL: ${DRIVE_PROTOCOL:-http}
-      DRIVE_PORT: ${DRIVE_PORT:-18440}
+      NEXTCLOUD_TRUSTED_DOMAINS: "localhost ${DRIVE_DOMAIN:-data.almatroudi.cloud} ${AUDIT_DOMAIN:-audit.almatroudi.cloud} 72.62.239.146 nextcloud caddy"
+      OVERWRITEPROTOCOL: ${DRIVE_PROTOCOL:-https}
+      OVERWRITECLIURL: "${DRIVE_PROTOCOL:-https}://${DRIVE_DOMAIN:-data.almatroudi.cloud}"
+      DRIVE_DOMAIN: ${DRIVE_DOMAIN:-data.almatroudi.cloud}
+      AUDIT_DOMAIN: ${AUDIT_DOMAIN:-audit.almatroudi.cloud}
+      DRIVE_PROTOCOL: ${DRIVE_PROTOCOL:-https}
+      DRIVE_PORT: ${DRIVE_PORT:-8440}
       PHP_MEMORY_LIMIT: 512M
       PHP_UPLOAD_LIMIT: 16G
       TZ: ${TZ:-UTC}
@@ -152,7 +153,7 @@ services:
     cap_add:
       - MKNOD
     environment:
-      aliasgroup1: "https://.*:443,http://.*:18440,http://.*:80"
+      aliasgroup1: "https://.*:443,https://.*:18440,https://.*:18490,http://.*:8440,http://.*:18440,http://.*:80"
       username: ${COLLABORA_ADMIN_USER:-collabora_admin}
       password: ${COLLABORA_ADMIN_PASSWORD:-ChangeMe_CollaboraPass_2026!}
       dictionaries: ${COLLABORA_DICTIONARIES:-en_US ar}
@@ -199,7 +200,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeMe_StrongPostgresPass_2026!}
       TZ: ${TZ:-UTC}
     ports:
-      - "${AUDIT_PORT:-18490}:8090"
+      - "127.0.0.1:${AUDIT_PORT:-8490}:8090"
     volumes:
       - nextcloud_logs:/var/log/nextcloud:ro
       - audit_db_data:/data
@@ -226,9 +227,13 @@ services:
       - collabora
       - audit-dashboard
     ports:
-      - "${DRIVE_PORT:-18440}:80"
+      - "127.0.0.1:${DRIVE_PORT:-8440}:80"
+      - "18440:18440"
+      - "18490:18490"
     volumes:
       - ./config/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /etc/ssl/cloudflare/origin.crt:/etc/ssl/cloudflare/origin.crt:ro
+      - /etc/ssl/cloudflare/origin.key:/etc/ssl/cloudflare/origin.key:ro
       - caddy_data:/data
       - caddy_config:/config
     deploy:

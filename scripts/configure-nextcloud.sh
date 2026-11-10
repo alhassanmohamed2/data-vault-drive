@@ -56,15 +56,25 @@ $OCC config:system:set preview_concurrency_new --value=2 --type=integer
 $OCC config:app:set preview jpeg_quality --value="80"
 
 # 7. Configure Collabora Online (Nextcloud Office) for Real-Time Document Editing & Change Tracking
-PUBLIC_URL="${DRIVE_PROTOCOL:-http}://${DRIVE_DOMAIN:-localhost}:${DRIVE_PORT:-18440}"
+if [ "${DRIVE_PROTOCOL:-https}" = "https" ]; then
+  PUBLIC_URL="https://${DRIVE_DOMAIN:-data.almatroudi.cloud}"
+else
+  PUBLIC_URL="${DRIVE_PROTOCOL:-http}://${DRIVE_DOMAIN:-localhost}:${DRIVE_PORT:-8440}"
+fi
 $OCC config:system:set overwrite.cli.url --value="$PUBLIC_URL"
+$OCC config:system:set overwriteprotocol --value="${DRIVE_PROTOCOL:-https}"
 $OCC config:system:set trusted_domains 0 --value="localhost"
-$OCC config:system:set trusted_domains 1 --value="${DRIVE_DOMAIN:-localhost}"
+$OCC config:system:set trusted_domains 1 --value="${DRIVE_DOMAIN:-data.almatroudi.cloud}"
 $OCC config:system:set trusted_domains 2 --value="nextcloud"
 $OCC config:system:set trusted_domains 3 --value="caddy"
+$OCC config:system:set trusted_domains 4 --value="${AUDIT_DOMAIN:-audit.almatroudi.cloud}"
+$OCC config:system:set trusted_domains 5 --value="72.62.239.146"
 $OCC config:system:set trusted_proxies 0 --value="172.16.0.0/12"
 $OCC config:system:set trusted_proxies 1 --value="192.168.0.0/16"
 $OCC config:system:set trusted_proxies 2 --value="10.0.0.0/8"
+$OCC config:system:set trusted_proxies 3 --value="127.0.0.1"
+$OCC config:system:set forwarded_for_headers 0 --value="HTTP_CF_CONNECTING_IP"
+$OCC config:system:set forwarded_for_headers 1 --value="HTTP_X_FORWARDED_FOR"
 
 # Configure Collabora WOPI URLs
 $OCC config:app:set richdocuments wopi_url --value="$PUBLIC_URL"

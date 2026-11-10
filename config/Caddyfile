@@ -3,9 +3,12 @@
 # ==============================================================================
 {
     auto_https off
+    servers {
+        trusted_proxies static private_ranges 127.0.0.0/8 ::1
+    }
 }
 
-:80 {
+(drive_routes) {
     encode zstd gzip
 
     # Security & DAV Redirects required by Nextcloud
@@ -35,5 +38,38 @@
     # Main Nextcloud Drive Application
     handle {
         reverse_proxy nextcloud:80
+    }
+}
+
+# Internal HTTP entrypoint for Global Host Nginx (port 443 -> 127.0.0.1:8440)
+:80 {
+    import drive_routes
+}
+
+# Cloudflare Origin Rule Port 18440 (SSL with Cloudflare Origin Certificate)
+:18440 {
+    tls /etc/ssl/cloudflare/origin.crt /etc/ssl/cloudflare/origin.key
+
+    @audit host audit.almatroudi.cloud
+    handle @audit {
+        reverse_proxy audit-dashboard:8090
+    }
+
+    handle {
+        import drive_routes
+    }
+}
+
+# Cloudflare Origin Rule Port 18490 (SSL with Cloudflare Origin Certificate)
+:18490 {
+    tls /etc/ssl/cloudflare/origin.crt /etc/ssl/cloudflare/origin.key
+
+    @data host data.almatroudi.cloud
+    handle @data {
+        import drive_routes
+    }
+
+    handle {
+        reverse_proxy audit-dashboard:8090
     }
 }
