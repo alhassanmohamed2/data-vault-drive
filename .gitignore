@@ -1,0 +1,22 @@
+# Environment secrets
+.env
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+
+# Node / React build artifacts
+node_modules/
+audit-dashboard/frontend/node_modules/
+audit-dashboard/frontend/dist/
+
+# Local SQLite databases, logs & backups
+*.db
+*.db-shm
+*.db-wal
+*.log
+backups/

@@ -1,0 +1,256 @@
+# ==============================================================================
+# SHEHATA DRIVE - Production Stack Tuned for 4 vCPU / 8 GB RAM VPS
+# Total Container Memory Ceiling: ~6.25 GB (Leaves ~1.75 GB for Linux OS & Cache)
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. PostgreSQL 16 Database (Metadata, Users, Activity, Versions, Shares)
+  # Budget: 1024 MB RAM | 1.0 vCPU
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: shehata-postgres
+    restart: unless-stopped
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nextcloud}
+      POSTGRES_USER: ${POSTGRES_USER:-nextcloud}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeMe_StrongPostgresPass_2026!}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./config/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nextcloud} -d ${POSTGRES_DB:-nextcloud}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1024M
+        reservations:
+          memory: 256M
+    networks:
+      - drive_net
+
+  # ----------------------------------------------------------------------------
+  # 2. Redis 7 (Transactional File Locking & Distributed Session/Meta Cache)
+  # Budget: 256 MB RAM | 0.5 vCPU
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: shehata-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:-ChangeMe_StrongRedisPass_2026!}
+      --maxmemory 192mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-ChangeMe_StrongRedisPass_2026!}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          memory: 64M
+    networks:
+      - drive_net
+
+  # ----------------------------------------------------------------------------
+  # 3. Nextcloud 30 Core (Google Drive Storage, Versioning, Sharing & Auditing)
+  # Budget: 2048 MB RAM | 2.0 vCPU
+  # ----------------------------------------------------------------------------
+  nextcloud:
+    image: nextcloud:30-apache
+    container_name: shehata-nextcloud
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-nextcloud}
+      POSTGRES_USER: ${POSTGRES_USER:-nextcloud}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeMe_StrongPostgresPass_2026!}
+      REDIS_HOST: redis
+      REDIS_HOST_PASSWORD: ${REDIS_PASSWORD:-ChangeMe_StrongRedisPass_2026!}
+      NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER:-admin}
+      NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD:-ChangeMe_StrongAdminPass_2026!}
+      NEXTCLOUD_TRUSTED_DOMAINS: "localhost ${DRIVE_DOMAIN:-localhost} nextcloud caddy"
+      OVERWRITEPROTOCOL: ${DRIVE_PROTOCOL:-http}
+      OVERWRITECLIURL: "${DRIVE_PROTOCOL:-http}://${DRIVE_DOMAIN:-localhost}:${DRIVE_PORT:-8080}"
+      DRIVE_DOMAIN: ${DRIVE_DOMAIN:-localhost}
+      DRIVE_PROTOCOL: ${DRIVE_PROTOCOL:-http}
+      DRIVE_PORT: ${DRIVE_PORT:-8080}
+      PHP_MEMORY_LIMIT: 512M
+      PHP_UPLOAD_LIMIT: 16G
+      TZ: ${TZ:-UTC}
+    volumes:
+      - nextcloud_html:/var/www/html
+      - nextcloud_data:/var/www/html/data
+      - nextcloud_logs:/var/log/nextcloud
+      - ./config/php/opcache-recommended.ini:/usr/local/etc/php/conf.d/opcache-recommended.ini:ro
+      - ./config/php/upload-limits.ini:/usr/local/etc/php/conf.d/upload-limits.ini:ro
+      - ./scripts/configure-nextcloud.sh:/docker-entrypoint-hooks.d/before-starting/configure-nextcloud.sh:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2048M
+        reservations:
+          memory: 512M
+    networks:
+      - drive_net
+
+  # ----------------------------------------------------------------------------
+  # 4. Nextcloud Background Worker (Cron, Previews, Trash Retention, Indexing)
+  # Budget: 512 MB RAM | 0.5 vCPU
+  # ----------------------------------------------------------------------------
+  nextcloud-cron:
+    image: nextcloud:30-apache
+    container_name: shehata-nextcloud-cron
+    restart: unless-stopped
+    entrypoint: /cron.sh
+    depends_on:
+      - nextcloud
+    volumes:
+      - nextcloud_html:/var/www/html
+      - nextcloud_data:/var/www/html/data
+      - nextcloud_logs:/var/log/nextcloud
+      - ./config/php/opcache-recommended.ini:/usr/local/etc/php/conf.d/opcache-recommended.ini:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          memory: 128M
+    networks:
+      - drive_net
+
+  # ----------------------------------------------------------------------------
+  # 5. Collabora Online (Nextcloud Office - Live Word/Excel/PPT + Track Changes)
+  # Budget: 2048 MB RAM | 1.5 vCPU (Strictly capped for 8 GB VPS stability)
+  # ----------------------------------------------------------------------------
+  collabora:
+    image: collabora/code:latest
+    container_name: shehata-collabora
+    restart: unless-stopped
+    cap_add:
+      - MKNOD
+    environment:
+      aliasgroup1: "https://.*:443,http://.*:8080,http://.*:80"
+      username: ${COLLABORA_ADMIN_USER:-collabora_admin}
+      password: ${COLLABORA_ADMIN_PASSWORD:-ChangeMe_CollaboraPass_2026!}
+      dictionaries: ${COLLABORA_DICTIONARIES:-en_US ar}
+      # Memory & Concurrency Tuning for 4 vCPU / 8 GB RAM VPS:
+      extra_params: >
+        --o:ssl.enable=false
+        --o:ssl.termination=true
+        --o:num_prespawn_children=1
+        --o:per_document.max_concurrency=4
+        --o:memproportion=25.0
+        --o:logging.level=warning
+      TZ: ${TZ:-UTC}
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 2048M
+        reservations:
+          memory: 512M
+    networks:
+      - drive_net
+
+  # ----------------------------------------------------------------------------
+  # 6. Shehata Drive Audit & Forensics Dashboard (Who Did What When + Versions)
+  # Budget: 256 MB RAM | 0.5 vCPU
+  # ----------------------------------------------------------------------------
+  audit-dashboard:
+    build:
+      context: ./audit-dashboard
+      dockerfile: Dockerfile
+    container_name: shehata-audit-dashboard
+    restart: unless-stopped
+    environment:
+      AUDIT_DB_PATH: /data/audit_events.db
+      AUDIT_LOG_PATH: /var/log/nextcloud/audit.log
+      AUDIT_ADMIN_USER: ${AUDIT_ADMIN_USER:-admin}
+      AUDIT_ADMIN_PASSWORD: ${AUDIT_ADMIN_PASSWORD:-ChangeMe_StrongAdminPass_2026!}
+      AUDIT_ADMIN_TOKEN: ${AUDIT_ADMIN_TOKEN:-shehata-audit-secret-2026}
+      AUDIT_MASS_DELETE_THRESHOLD: ${AUDIT_MASS_DELETE_THRESHOLD:-15}
+      WEBHOOK_ALERT_URL: ${WEBHOOK_ALERT_URL:-}
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-nextcloud}
+      POSTGRES_USER: ${POSTGRES_USER:-nextcloud}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeMe_StrongPostgresPass_2026!}
+      TZ: ${TZ:-UTC}
+    ports:
+      - "${AUDIT_PORT:-8090}:8090"
+    volumes:
+      - nextcloud_logs:/var/log/nextcloud:ro
+      - audit_db_data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          memory: 64M
+    networks:
+      - drive_net
+
+  # ----------------------------------------------------------------------------
+  # 7. Caddy Reverse Proxy (Unified Entrypoint for Drive + Collabora + Audit UI)
+  # Budget: 128 MB RAM | 0.5 vCPU
+  # ----------------------------------------------------------------------------
+  caddy:
+    image: caddy:2-alpine
+    container_name: shehata-caddy
+    restart: unless-stopped
+    depends_on:
+      - nextcloud
+      - collabora
+      - audit-dashboard
+    ports:
+      - "${DRIVE_PORT:-8080}:80"
+    volumes:
+      - ./config/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+        reservations:
+          memory: 32M
+    networks:
+      - drive_net
+
+networks:
+  drive_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  nextcloud_html:
+  nextcloud_data:
+  nextcloud_logs:
+  audit_db_data:
+  caddy_data:
+  caddy_config:

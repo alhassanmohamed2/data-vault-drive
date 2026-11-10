@@ -1,0 +1,39 @@
+# ==============================================================================
+# Caddy Reverse Proxy Configuration for Shehata Drive + Collabora + Audit UI
+# ==============================================================================
+{
+    auto_https off
+}
+
+:80 {
+    encode zstd gzip
+
+    # Security & DAV Redirects required by Nextcloud
+    redir /.well-known/carddav /remote.php/dav/ 301
+    redir /.well-known/caldav /remote.php/dav/ 301
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Robots-Tag "noindex, nofollow"
+        -Server
+    }
+
+    # Collabora Online (Nextcloud Office) WebSockets & Static Endpoints
+    @collabora {
+        path /browser/* /hosting/discovery /hosting/capabilities /cool/* /lool/*
+    }
+    handle @collabora {
+        reverse_proxy collabora:9980
+    }
+
+    # Shehata Drive Audit & Forensics Dashboard (accessible under /audit-portal/*)
+    handle_path /audit-portal/* {
+        reverse_proxy audit-dashboard:8090
+    }
+
+    # Main Nextcloud Drive Application
+    handle {
+        reverse_proxy nextcloud:80
+    }
+}
